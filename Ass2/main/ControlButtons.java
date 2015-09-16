@@ -1,7 +1,9 @@
 package main;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -38,7 +40,9 @@ public class ControlButtons extends JPanel implements Observer
 	public JButton st_undo = new JButton("Undo");
 	public JButton st_replay = new JButton("Replay");
 	public JButton st_quit = new JButton("Quit");
-
+	public JButton st_save = new JButton("Save");
+	public JButton st_load = new JButton("Load");
+	public JButton changeLayout = new JButton("Layout");
 	
 	public boolean isPaused() {
 		return isPaused;
@@ -116,6 +120,58 @@ public class ControlButtons extends JPanel implements Observer
 		this.theCommand = theCommand;
 	}
 
+	public void changeLayout() {
+
+		invalidate();
+		removeAll();
+
+		switch (layoutState) {
+		case 0:
+			layoutType = new FlowLayout();
+			setLayout(layoutType);
+			add(st_but);
+			add(st_pse);
+			add(st_save);
+			add(st_load);
+			add(st_undo);
+			add(st_replay);
+			add(changeLayout);
+			break;
+
+		case 1:
+			layoutType = new BorderLayout();
+			setLayout(layoutType);
+			add(st_but, BorderLayout.WEST);
+			add(st_save, BorderLayout.EAST);
+
+			JPanel cPanel = new JPanel();
+			cPanel.setLayout(new BorderLayout());
+			cPanel.add(st_pse, BorderLayout.NORTH);
+			cPanel.add(st_load, BorderLayout.WEST);
+			cPanel.add(st_undo, BorderLayout.EAST);
+			cPanel.add(st_replay, BorderLayout.SOUTH);
+			cPanel.add(changeLayout, BorderLayout.CENTER);
+			add(cPanel, BorderLayout.CENTER);
+			break;
+
+		case 2:
+			layoutType = new GridLayout(3, 2);
+			setLayout(layoutType);
+			add(st_but);
+			add(st_pse);
+			add(st_save);
+			add(st_load);
+			add(st_undo);
+			add(st_replay);
+			add(changeLayout);
+			break;
+		}
+		validate();
+		gameDriver.pack();
+
+	}
+	
+	
 	public ControlButtons(final GameBoard game) 
 	{
 		setStart(false);
@@ -124,10 +180,14 @@ public class ControlButtons extends JPanel implements Observer
 		this.setLayout(layout);
 		add(st_but);
 		add(st_pse);
+		add(st_save);
+		add(st_load);
 		add(st_undo);
 		add(st_replay);
 		add(st_quit);
-
+		add(changeLayout);
+		
+		st_save.setEnabled(false);
 		st_pse.setEnabled(false);
 		st_undo.setEnabled(false);
 		st_replay.setEnabled(false);
@@ -243,7 +303,27 @@ public class ControlButtons extends JPanel implements Observer
 				System.exit(0);
 			}
 		});
+		
+		changeLayout.addActionListener(new ActionListener() {
 
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				layoutState++;
+
+				if (layoutState >= 3)
+					layoutState = 0;
+
+				if (timerObs == null)
+					timerObs = new TimerObservable();
+
+				timerObs.getComputeCoordinatesObj().setLayoutState(layoutState);
+				ChangeLayoutCommand changeLayoutCommand = new ChangeLayoutCommand(
+						gameDriver.getControlButtons());
+				setTheCommand(changeLayoutCommand);
+				press();
+
+			}
+		});
 		setBackground(Color.black);
 	}
 
