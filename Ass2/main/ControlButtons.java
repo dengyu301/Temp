@@ -2,6 +2,7 @@ package main;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.LayoutManager;
@@ -12,6 +13,7 @@ import java.util.Observable;
 import java.util.Observer;
 
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 
 /**
@@ -23,7 +25,7 @@ import javax.swing.JPanel;
 
 public class ControlButtons extends JPanel implements Observer 
 {
-	private static final long serialVersionUID = 1L;
+//	private static final long serialVersionUID = 1L;
 	private Command theCommand;
 	private int gameState;
 	private GameDriver gameDriver;
@@ -34,6 +36,8 @@ public class ControlButtons extends JPanel implements Observer
 	private boolean isStart;
 	private LayoutManager layoutType;
 	private int layoutState;
+	private LoadFromFile loadFromFile;
+	private SaveLogic saveLogic;
 
 	public JButton st_but = new JButton("Start");
 	public JButton st_pse = new JButton("Pause");
@@ -42,7 +46,7 @@ public class ControlButtons extends JPanel implements Observer
 	public JButton st_quit = new JButton("Quit");
 	public JButton st_save = new JButton("Save");
 	public JButton st_load = new JButton("Load");
-	public JButton changeLayout = new JButton("Layout");
+	public JButton st_changeLayout = new JButton("Layout");
 	
 	public boolean isPaused() {
 		return isPaused;
@@ -135,7 +139,7 @@ public class ControlButtons extends JPanel implements Observer
 			add(st_load);
 			add(st_undo);
 			add(st_replay);
-			add(changeLayout);
+			add(st_changeLayout);
 			break;
 
 		case 1:
@@ -150,7 +154,7 @@ public class ControlButtons extends JPanel implements Observer
 			cPanel.add(st_load, BorderLayout.WEST);
 			cPanel.add(st_undo, BorderLayout.EAST);
 			cPanel.add(st_replay, BorderLayout.SOUTH);
-			cPanel.add(changeLayout, BorderLayout.CENTER);
+			cPanel.add(st_changeLayout, BorderLayout.CENTER);
 			add(cPanel, BorderLayout.CENTER);
 			break;
 
@@ -163,7 +167,7 @@ public class ControlButtons extends JPanel implements Observer
 			add(st_load);
 			add(st_undo);
 			add(st_replay);
-			add(changeLayout);
+			add(st_changeLayout);
 			break;
 		}
 		validate();
@@ -185,12 +189,17 @@ public class ControlButtons extends JPanel implements Observer
 		add(st_undo);
 		add(st_replay);
 		add(st_quit);
-		add(changeLayout);
+		add(st_changeLayout);
 		
 		st_save.setEnabled(false);
 		st_pse.setEnabled(false);
 		st_undo.setEnabled(false);
 		st_replay.setEnabled(false);
+		loadFromFile = new LoadFromFile();
+		saveLogic = new SaveLogic();
+		st_load.setSize(new Dimension(st_changeLayout.getWidth(), st_changeLayout
+				.getHeight()));
+		
 		st_but.addActionListener(new ActionListener() 
 		{
 			@Override
@@ -199,6 +208,7 @@ public class ControlButtons extends JPanel implements Observer
 				st_pse.setEnabled(true);
 				st_undo.setEnabled(true);
 				st_replay.setEnabled(false);
+				st_save.setEnabled(true);
 				game.requestFocusInWindow();
 
 				if (st_but.getText().equals("Stop")) 
@@ -304,7 +314,104 @@ public class ControlButtons extends JPanel implements Observer
 			}
 		});
 		
-		changeLayout.addActionListener(new ActionListener() {
+		st_save.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				st_but.setEnabled(true);
+				st_pse.setText("Resume");
+				st_pse.setEnabled(true);
+				st_undo.setEnabled(false);
+				st_replay.setEnabled(true);
+				st_save.setEnabled(false);
+				st_changeLayout.setEnabled(true);
+				PauseCommand pauseCmd;
+				pauseCmd = new PauseCommand(timerObs);
+				timerObs.deleteObserver((Observer) gameDriver.getGameBoard());
+				timerObs.deleteObserver((Observer) gameDriver.getDisplayClock());
+				timerObs.deleteObserver((Observer) gameDriver
+						.getControlButtons());
+				gameDriver.getControlButtons().setTheCommand(pauseCmd);
+				gameDriver.getControlButtons().press();
+				saveUsingExplorer();
+				SaveCommand saveCommand;
+				saveCommand = new SaveCommand(timerObs);
+				setTheCommand(saveCommand);
+				press();
+
+			}
+
+			private void saveUsingExplorer() {
+				String newFileName = "";
+				String newDirectoryname = "";
+				JFileChooser c = new JFileChooser();
+				int rVal = c.showSaveDialog(gameDriver);
+				if (rVal == JFileChooser.APPROVE_OPTION) {
+					newFileName = c.getSelectedFile().getName();
+					newDirectoryname = c.getCurrentDirectory().toString();
+				}
+				if (rVal == JFileChooser.CANCEL_OPTION) {
+					newFileName = "You pressed cancel";
+					newDirectoryname = "";
+				}
+				String modifiedfileName = (newDirectoryname + "\\" + newFileName)
+						.replace("\\", "\\\\");
+				saveLogic.setFileName(modifiedfileName);
+				timerObs.setSaveLogic(saveLogic);
+			}
+
+		});
+		st_load.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				st_but.setText("Restart");
+				st_but.setEnabled(true);
+				st_pse.setText("Resume");
+				st_pse.setEnabled(true);
+				st_undo.setEnabled(true);
+				st_replay.setEnabled(true);
+				st_save.setEnabled(false);
+				st_load.setEnabled(true);
+				st_changeLayout.setEnabled(true);
+				if (timerObs != null)
+					timerObs.getTimer().stop();
+
+				if (timerObs == null)
+					timerObs = new TimerObservable();
+				loadFromExplorer();
+				LoadCommand loadCommand;
+				loadCommand = new LoadCommand(timerObs);
+				timerObs.addObserver((Observer) gameDriver.getGameBoard());
+				timerObs.addObserver((Observer) gameDriver.getDisplayClock());
+				timerObs.addObserver((Observer) gameDriver.getControlButtons());
+				setTheCommand(loadCommand);
+				press();
+				game.requestFocusInWindow();
+			}
+
+			private void loadFromExplorer() {
+				String loadedFileName = "";
+				String loadedDirectoryname = "";
+				JFileChooser c = new JFileChooser();
+				int rVal = c.showOpenDialog(gameDriver);
+				if (rVal == JFileChooser.APPROVE_OPTION) {
+					loadedFileName = c.getSelectedFile().getName();
+					loadedDirectoryname = c.getCurrentDirectory().toString();
+				}
+				if (rVal == JFileChooser.CANCEL_OPTION) {
+					loadedFileName = "You pressed cancel";
+					loadedDirectoryname = "";
+				}
+				String modifiedfileName = (loadedDirectoryname + "\\" + loadedFileName)
+						.replace("\\", "\\\\");
+				loadFromFile.setFileName(modifiedfileName);
+				timerObs.setLoadFromFile(loadFromFile);
+
+			}
+		});
+		
+		st_changeLayout.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {

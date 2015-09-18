@@ -22,6 +22,8 @@ public class TimerObservable extends Observable
 	private Timer timer;
 	private LinkedList<Object> CommandHistoryList = new LinkedList<Object>();
 	private boolean loadGame;
+	private LoadFromFile loadFromFile;
+	private SaveLogic saveLogic;
 	private boolean gameFlag = true;
 	private static boolean replayFlag = false;
 	private int replayFrameCounter;
@@ -78,6 +80,23 @@ public class TimerObservable extends Observable
 		ReplayList = replayList;
 	}
 
+	/*
+	 * @returns a reference to load from file class
+	 */
+	public LoadFromFile getLoadFromFile() {
+		return loadFromFile;
+	}
+
+	public void setLoadFromFile(LoadFromFile loadFromFile) {
+		this.loadFromFile = loadFromFile;
+	}
+
+	/*
+	 * @returns a reference to savelogic
+	 */
+	public SaveLogic getSaveLogic() {
+		return saveLogic;
+	}
 	/*
 	 * @returns a game flag variable
 	 */
@@ -238,5 +257,32 @@ public class TimerObservable extends Observable
 		
 		this.getTimer().setDelay(5);
 		this.getTimer().restart();
+	}
+	/*
+	 * Method - sends replay list to saveLogic class to save it in a file
+	 */
+	public void saveGame() {
+		saveLogic.setListToSave(ReplayList);
+		saveLogic.save();
+	}
+
+	/*
+	 * Method - loads the game from one of the saved instance.
+	 */
+	public void loadGame() {
+		setLoadGame(true);
+		StoreDimensions storeDimensions;
+		LinkedList<Object> list = loadFromFile.load();
+		setReplayList(list);
+		setCommandHistoryList(list);
+		storeDimensions = (StoreDimensions) list.get(list.size() - 1);
+		getComputeCoordinatesObj().saveDimensions(storeDimensions);
+		shapeObjects = getComputeCoordinatesObj().getListShapeObjects();
+		setChanged();
+		notifyObservers(shapeObjects);
+	}
+
+	public void setSaveLogic(SaveLogic saveLogic) {
+		this.saveLogic = saveLogic;
 	}
 }
